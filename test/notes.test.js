@@ -94,7 +94,7 @@ describe('notes API resource', function(){
               expect(res).to.be.json;
               expect(res.body).to.be.a('object');
               expect(res.body).to.include.keys(
-                'title', 'content');    
+                'title', 'content', 'id');    
               expect(res.body.id).to.not.be.null;
               expect(res.body.title).to.equal(newNote.title);
               expect(res.body.content).to.equal(newNote.content);
