@@ -5,11 +5,11 @@ const Note = require('../models/note');
 
 // const NoteModel = mongoose.model('Note', notesSchema, 'note'); 
 const searchTerm = 'Posuere';  
-const regex = new RegExp(searchTerm, 'i'); 
+
 
 mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
   .then(() => {
-
+    const regex = new RegExp(searchTerm, 'i'); 
     // let filter = {};
 
     // if (searchTerm) {
