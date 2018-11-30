@@ -106,7 +106,7 @@ router.post('/', (req, res, next) => {
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
   const { id } = req.params;
-  const thingsToUpdate
+  const thingsToUpdate = {}; 
   const updatedableFields = ['title', 'content', 'folderId', 'tags'];
   updatedableFields.forEach(field => {
     if(field in req.body){
