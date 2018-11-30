@@ -138,13 +138,13 @@ router.put('/:id', (req, res, next) => {
         const err = new Error('The `tagId` is not valid');
         err.status = 400;
         return next(err);
-      }
-    };
+    }
+  };
 
 
-  const updateNote = { title, content, folderId, tags };
+  // const updateNote = { title, content, folderId, tags };
 
-  Note.findByIdAndUpdate(id, updateNote, { new: true })
+  Note.findByIdAndUpdate(id, thingsToUpdate, { new: true })
     .then(result => {
       if (result) {
         res.status(204).json(result);
