@@ -7,7 +7,7 @@ const { TEST_MONGODB_URI } = require('../config');
 
 const Note = require('../models/note');
 
-const { notes } = require('../db/seed/notes');
+const { notes } = require('../db/seed/data');
 
 const expect = chai.expect;
 chai.use(chaiHttp);
@@ -83,7 +83,8 @@ describe('notes API resource', function(){
     
           const newNote = {
             "title": "some new title",  
-            "content":"some new content"
+            "content":"some new content",
+            "tags":["222222222222222222222200"]
           };
     
           return chai.request(app)

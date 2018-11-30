@@ -9,20 +9,26 @@ const router = express.Router();
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
-  const { searchTerm } = req.query;
+  const { searchTerm, folderId, tagsId } = req.query;
 
   let filter = {};
 
   if (searchTerm) {
-    filter.title = { $regex: searchTerm, $options: 'i' };
+     const re = new RegExp(searchTerm, 'i');
+     filter.$or = [{ 'title': re }, { 'content': re }];
+  }
 
-    // Mini-Challenge: Search both `title` and `content`
-    // const re = new RegExp(searchTerm, 'i');
-    // filter.$or = [{ 'title': re }, { 'content': re }];
+  if (folderId) {
+    filter.folderId = folderId;
+  }
+
+  if(tagsId){
+    filter.tagsId = tagsId;
   }
 
   Note.find(filter)
     .sort({ updatedAt: 'desc' })
+    .populate('tags')
     .then(results => {
       res.json(results);
     })
@@ -33,6 +39,7 @@ router.get('/', (req, res, next) => {
 
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
+
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -42,6 +49,7 @@ router.get('/:id', (req, res, next) => {
   }
 
   Note.findById(id)
+    .populate('folderId', 'tagsId')
     .then(result => {
       if (result) {
         res.json(result);
@@ -56,7 +64,7 @@ router.get('/:id', (req, res, next) => {
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const { title, content } = req.body;
+  const { title, content, tags, folderId} = req.body;
 
   /***** Never trust users - validate input *****/
   if (!title) {
@@ -65,13 +73,30 @@ router.post('/', (req, res, next) => {
     return next(err);
   }
 
-  const newNote = { title, content };
+  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
+    const err = new Error('The `folderId` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  if (tags){
+    tags.forEach(element=>{
+      if (!mongoose.Types.ObjectId.isValid(element)) {
+        const err = new Error('The `tagId` is not valid');
+        err.status = 400;
+        return next(err);
+   }
+  });
+  };
+
+  const newNote = { title, content, folderId, tags };
+    if(newNote.folderId ===''){
+      delete newNote.folderId;
+    }
 
   Note.create(newNote)
     .then(result => {
-      res.location(`${req.originalUrl}/${result.id}`)
-        .status(201)
-        .json(result);
+      res.location(`${req.originalUrl}/${result.id}`).status(201).json(result);
     })
     .catch(err => {
       next(err);
@@ -81,7 +106,13 @@ router.post('/', (req, res, next) => {
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
   const { id } = req.params;
-  const { title, content } = req.body;
+  const thingsToUpdate
+  const updatedableFields = ['title', 'content', 'folderId', 'tags'];
+  updatedableFields.forEach(field => {
+    if(field in req.body){
+      thingsToUpdate[field] = req.body[field];
+    }
+  });
 
   /***** Never trust users - validate input *****/
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -90,18 +121,33 @@ router.put('/:id', (req, res, next) => {
     return next(err);
   }
 
-  if (!title) {
+  if (!thingsToUpdate.title) {
     const err = new Error('Missing `title` in request body');
     err.status = 400;
     return next(err);
   }
 
-  const updateNote = { title, content };
+  if (thingsToUpdate.folderId && !mongoose.Types.ObjectId.isValid(thingsToUpdate.folderId)) {
+    const err = new Error('The `folderId` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+  if (thingsToUpdate.tags){
+    const badTagIds = thingsToUpdate.tags.filter((tag)=> !mongoose.Types.ObjectId.isValid(tag));
+    if(badTagIds.length){
+        const err = new Error('The `tagId` is not valid');
+        err.status = 400;
+        return next(err);
+      }
+    };
+
+
+  const updateNote = { title, content, folderId, tags };
 
   Note.findByIdAndUpdate(id, updateNote, { new: true })
     .then(result => {
       if (result) {
-        res.json(result);
+        res.status(204).json(result);
       } else {
         next();
       }
