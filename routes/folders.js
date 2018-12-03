@@ -2,6 +2,7 @@
 const express = require('express');
 const Folder = require('../models/folder');
 const router = express.Router();
+const Note = require('../models/note');
 const mongoose = require('mongoose');
 
 router.get('/', (req, res, next) => {
@@ -11,7 +12,7 @@ router.get('/', (req, res, next) => {
     filter.$or = [{ 'name': regex}]
         
     Folder.find(filter)
-    .sort({ updatedAt: 'desc'})
+    .sort({ updatedAt: 'asc'})
     .then(results => {
       res.json(results);
     })
@@ -25,14 +26,32 @@ router.get('/', (req, res, next) => {
         const { id } = req.params;
         console.log(id);  
             if(!mongoose.Types.ObjectId.isValid(id)){
-                const err = new Error('Invalid `id`');
+                const err = new Error('The `id` is not valid');
                 err.status = 400;
                 return next(err);
             }
+            // console.log(Folder.find({_id:id}));
+            Folder.findOne({_id:id}).then(identifyYourself => {
+              console.log(identifyYourself);
+              if(!identifyYourself) {
+                  const err = new Error('no folder with that id'); 
+                  err.status = 404; 
+                  return next(err); 
+              }
+            })
+              .catch(function(err) {
+               console.log(err); 
+              });
+
             Folder.findById(id) 
             .then(result =>{
-                res.json(result)
-            }) 
+                if(!result){
+                  console.log(result);
+                }
+              else{
+              return res.json(result)
+              }
+              }) 
             .catch(err => next(err));
     });
   
@@ -61,36 +80,40 @@ router.get('/', (req, res, next) => {
   
   /* ========== PUT/UPDATE A SINGLE ITEM ========== */
   router.put('/:id', (req, res, next) => {
-    const id = req.params.id;
-    if(!mongoose.Types.ObjectId.isValid(id)){
+    const { id } = req.params;
+    const { name } = req.body;
+  
+    /***** Never trust users - validate input *****/
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       const err = new Error('Please enter a Valid `id`');
       err.status = 400;
       return next(err);
     }
-    /***** Never trust users - validate input *****/
-    const updateObj = {};
-    const updateableFields = ['name'];
   
-    updateableFields.forEach(field => {
-        if(field === 'name'){
-          updateObj['name'] = req.body[field];
-        }else{
-          updateObj[field] = req.body[field];
+    if (!name) {
+      const err = new Error('Missing `name` in request body');
+      err.status = 400;
+      return next(err);
+    }
+  
+    const updateFolder = { name };
+  
+    Folder.findByIdAndUpdate(id, updateFolder, { new: true })
+      .then(result => {
+        if (result) {
+          res.json(result)
+          .status(204); 
+        } else {
+          next();
         }
-      });
-    console.log(updateObj);
-    console.log('Update a Folder');
-    Folder.findByIdAndUpdate(id, updateObj)
-    .then(result => res.status(204).json(result))
-    .catch(err => {
+      })
+      .catch(err => {
         if (err.code === 11000) {
           err = new Error('The folder name already exists');
           err.status = 400;
         }
         next(err);
-      });  
-  
-  
+      });
   });
   
   /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
